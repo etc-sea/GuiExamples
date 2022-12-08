@@ -1,0 +1,500 @@
+﻿$version 11.00
+
+$rect <30,410,230,450>
+inline Inline
+{
+  #include "DeviceDriver.h"
+
+  void DeviceDriver_SetLedBar( XInt32 aLed, XBool aState );
+
+}
+
+// This is the root component of the entire GUI application.
+$rect <30,60,230,100>
+$output false
+class Application : Core::Root
+{
+  $rect <700,0,880,40>
+  inherited method Init()
+  {
+  }
+
+  $rect <500,0,700,40>
+  inherited property Bounds = <0,0,480,272>;
+
+  // This is a filled rectangle view.
+  $rect <20,20,160,60>
+  object Views::Rectangle Rectangle
+  {
+    preset Bounds = <0,0,480,272>;
+    preset Color = #536283FF;
+  }
+
+  $rect <20,20,160,60>
+  object Application::ToggleButton ToggleButton0
+  {
+    preset Bounds = <24,12,155,59>;
+    preset State = ^Application::Device.LED0;
+    preset Label = "LED0";
+  }
+
+  $rect <20,20,160,60>
+  object Application::ToggleButton ToggleButton1
+  {
+    preset Bounds = <24,61,155,107>;
+    preset State = ^Application::Device.LED1;
+    preset Label = "LED1";
+  }
+
+  $rect <20,20,160,60>
+  object Application::ToggleButton ToggleButton2
+  {
+    preset Bounds = <24,111,155,157>;
+    preset State = ^Application::Device.LED2;
+    preset Label = "LED2";
+  }
+
+  $rect <20,20,160,60>
+  object Application::ToggleButton ToggleButton3
+  {
+    preset Bounds = <24,161,155,207>;
+    preset State = ^Application::Device.LED3;
+    preset Label = "LED3";
+  }
+
+  $rect <20,20,160,60>
+  object Application::ToggleButton ToggleButton4
+  {
+    preset Bounds = <24,211,155,258>;
+    preset State = ^Application::Device.LED4;
+    preset Label = "LED4";
+  }
+}
+
+// This is a font resource.
+$rect <540,50,740,90>
+$output false
+resource Resources::Font Font
+{
+  attr fontname FontName = Roboto Black;
+  attr fontheight Height = 48;
+  attr fontquality Quality = High;
+  attr fontranges Ranges = 0x20-0xFF;
+  attr fontaspectratio AspectRatio = 1.0;
+  attr fontbold Bold = false;
+  attr fontitalic Italic = false;
+  attr fontkerning Kerning = true;
+  attr fontheightmode HeightMode = Compatible;
+  attr fontrowdistance RowDistance;
+}
+
+$rect <310,60,510,100>
+$output false
+class ToggleButton : Core::Group
+{
+  $rect <0,230,200,270>
+  inherited property Bounds = <0,0,188,75>;
+
+  $rect <0,310,200,350>
+  inherited method UpdateLayout()
+  {
+    // Always invoke the inherited method.
+    super( aSize );
+
+    var rect bounds = Bounds.orect;
+    Frame.Bounds = bounds;
+    Text.Bounds  = bounds;
+
+    SimpleTouchHandler.Point1 = bounds.point1;
+    SimpleTouchHandler.Point2 = point(bounds.x2, bounds.y1);
+    SimpleTouchHandler.Point3 = bounds.point2;
+    SimpleTouchHandler.Point4 = point(bounds.x1, bounds.y2);
+
+  }
+
+  $rect <0,270,200,310>
+  inherited method UpdateViewState()
+  {
+    // Always invoke the inherited method.
+    super( aState );
+
+    Frame.Color = State != null && State^ ? ColorOn : ColorOff;
+
+  }
+
+  $rect <20,20,160,60>
+  object Views::Frame Frame
+  {
+    preset Bitmap = Application::Frame;
+  }
+
+  $rect <0,100,200,140>
+  var color ColorOn = #13E350FF;
+
+  $rect <0,140,200,180>
+  var color ColorOff = #969696FF;
+
+  $rect <210,0,410,40>
+  property ^bool State;
+
+  $rect <210,40,410,80>
+  onset State
+  {
+    // The value doesn't change - nothing to do.
+    if ( pure State == value )
+      return;
+
+    // Remember the property's new value.
+    pure State = value;
+
+    InvalidateViewState();
+
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text
+  {
+    preset Font = Application::Font;
+  }
+
+  $rect <420,0,620,40>
+  property string Label = "";
+
+  $rect <420,40,620,80>
+  onset Label
+  {
+    // The value doesn't change - nothing to do.
+    if ( Text.String == value )
+      return;
+
+    // Remember the property's new value.
+    Text.String = value;
+
+  }
+
+  $rect <420,80,620,120>
+  onget Label
+  {
+    return Text.String;
+  }
+
+  $rect <20,20,160,60>
+  object Core::SimpleTouchHandler SimpleTouchHandler
+  {
+    preset OnPress = onPress;
+  }
+
+  $rect <210,100,410,140>
+  slot onPress
+  {
+    sender; /* the method is called from the sender object */
+
+    if ( State != null )
+    {
+      State^ = !State^;
+      InvalidateViewState();
+    }
+
+  }
+}
+
+$rect <740,50,940,90>
+$output false
+resource Resources::Bitmap Frame
+{
+  attr bitmapfile FileName = .\Res\frame.png;
+  attr bitmapformat Format = Alpha8;
+  attr framesize FrameSize;
+  attr framedelay FrameDelay;
+  attr bitmapdithering Dithering = Auto;
+  attr bitmapmode Mode = Default;
+}
+
+$rect <30,370,230,410>
+$output false
+class DeviceClass : Templates::DeviceClass
+{
+  $rect <10,10,210,50>
+  property bool LED0;
+
+  $rect <210,10,410,50>
+  onset LED0
+  {
+    // The property doesn't change -> nothing to do.
+    if ( pure LED0 == value )
+      return;
+
+    // Remember the new value in the internal memory of the property.
+    pure LED0 = value;
+
+    // For target code generation you will use your specific device API 
+    // to change the affected value.
+    $if !$prototyper
+      native ( value )
+      {
+         DeviceDriver_SetLedBar( 0, value );
+      }
+    $endif
+
+  }
+
+  $rect <10,50,210,90>
+  property bool LED1;
+
+  $rect <210,50,410,90>
+  onset LED1
+  {
+    // The property doesn't change -> nothing to do.
+    if ( pure LED1 == value )
+      return;
+
+    // Remember the new value in the internal memory of the property.
+    pure LED1 = value;
+
+    // For target code generation you will use your specific device API 
+    // to change the affected value.
+    $if !$prototyper
+      native ( value )
+      {
+         DeviceDriver_SetLedBar( 1, value );
+      }
+    $endif
+
+  }
+
+  $rect <10,90,210,130>
+  property bool LED2;
+
+  $rect <210,90,410,130>
+  onset LED2
+  {
+    // The property doesn't change -> nothing to do.
+    if ( pure LED2 == value )
+      return;
+
+    // Remember the new value in the internal memory of the property.
+    pure LED2 = value;
+
+    // For target code generation you will use your specific device API 
+    // to change the affected value.
+    $if !$prototyper
+      native ( value )
+      {
+         DeviceDriver_SetLedBar( 2, value );
+      }
+    $endif
+
+  }
+
+  $rect <10,130,210,170>
+  property bool LED3;
+
+  $rect <210,130,410,170>
+  onset LED3
+  {
+    // The property doesn't change -> nothing to do.
+    if ( pure LED3 == value )
+      return;
+
+    // Remember the new value in the internal memory of the property.
+    pure LED3 = value;
+
+    // For target code generation you will use your specific device API 
+    // to change the affected value.
+    $if !$prototyper
+      native ( value )
+      {
+         DeviceDriver_SetLedBar( 3, value );
+      }
+    $endif
+
+  }
+
+  $rect <10,170,210,210>
+  property bool LED4;
+
+  $rect <210,170,410,210>
+  onset LED4
+  {
+    // The property doesn't change -> nothing to do.
+    if ( pure LED4 == value )
+      return;
+
+    // Remember the new value in the internal memory of the property.
+    pure LED4 = value;
+
+    // For target code generation you will use your specific device API 
+    // to change the affected value.
+    $if !$prototyper
+      native ( value )
+      {
+         DeviceDriver_SetLedBar( 4, value );
+      }
+    $endif
+
+  }
+}
+
+$rect <230,370,430,410>
+autoobject Application::DeviceClass Device;
+
+// GUI components
+note group Note1
+{
+  attr Bounds = <20,10,520,210>;
+}
+
+// Resources
+note group Note2
+{
+  attr Bounds = <530,10,950,210>;
+}
+
+// Device Interface
+note group Note
+{
+  attr Bounds = <20,330,440,460>;
+}
+
+$rect <310,100,510,140>
+$output false
+class BlinkingBar : Core::Group
+{
+  $rect <100,0,300,40>
+  inherited property Bounds = <0,0,80,272>;
+
+  $rect <100,90,300,130>
+  inherited method UpdateLayout()
+  {
+    // Always invoke the inherited method.
+    super( aSize );
+
+    var rect bounds = Bounds.orect;
+    bounds = bounds * point((6 - bounds.w) / 2, -9);
+    BackSlide.Bounds = bounds;
+    FrontSlide.Bounds = bounds;
+    Slider.Bounds.origin.x = bounds.center.x - Slider.Bounds.w / 2;
+
+    var int32 x = Bounds.w;
+    var int32 y = bounds.y2 - 24;
+    LineBottom.Point1 = point( 0, y );
+    LineBottom.Point2 = point( x, y );
+    LineTop.Point1 = point( 0, 12 );
+    LineTop.Point2 = point( x, 12 );
+    y = ( y + 12 ) / 2;
+    LineMiddle.Point1 = point( 0, y );
+    LineMiddle.Point2 = point( x, y );
+
+    Touch.Point1 = point(bounds.x1 - 24, bounds.y1);
+    Touch.Point2 = point(bounds.x2 + 24, bounds.y1);
+    Touch.Point3 = point(bounds.x2 + 24, bounds.y2);
+    Touch.Point4 = point(bounds.x1 - 24, bounds.y2);
+  }
+
+  $rect <100,50,300,90>
+  inherited method UpdateViewState()
+  {
+    // Always invoke the inherited method.
+    super( aState );
+
+    if ( Pos <= 12 )
+    {
+      FrontSlide.Bounds.y1 = BackSlide.Bounds.y1;
+      FrontSlide.Edges += Graphics::Edges[ Top ];
+    }
+    else
+    {
+      FrontSlide.Bounds.y1 = Pos;
+      FrontSlide.Edges -= Graphics::Edges[ Top ];
+    }
+
+    var point SliderPos = Slider.Bounds.center;
+    var point NewPos = point( SliderPos.x, Pos );
+    Slider.MoveView( NewPos - SliderPos, true );
+
+  }
+
+  $rect <20,20,160,60>
+  object Views::Line LineBottom;
+
+  $rect <20,20,160,60>
+  object Views::Line LineMiddle;
+
+  $rect <20,20,160,60>
+  object Views::Line LineTop;
+
+  $rect <20,20,160,60>
+  object Views::Frame BackSlide
+  {
+    preset Bounds = <27,0,46,272>;
+    preset Color = #515151FF;
+    preset Bitmap = Application::NarrowFrame;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Frame FrontSlide
+  {
+    preset Bounds = <52,0,76,272>;
+    preset ColorBL = #1E1EFFFF;
+    preset ColorBR = #2C09FFFF;
+    preset ColorTR = #CD19FFFF;
+    preset ColorTL = #FF2121FF;
+    preset Bitmap = Application::NarrowFrame;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Frame Slider
+  {
+    preset Bounds = <28,136,52,160>;
+    preset Color = #FFFFFFFF;
+    preset Bitmap = Application::Frame;
+  }
+
+  $rect <20,20,160,60>
+  object Core::SimpleTouchHandler Touch
+  {
+    preset OnDrag = onDrag;
+  }
+
+  $rect <100,160,300,200>
+  slot onDrag
+  {
+    sender; /* the method is called from the sender object */
+
+    Pos = Touch.CurrentPos.y;
+  }
+
+  $rect <300,160,500,200>
+  property int32 Pos;
+
+  $rect <300,200,500,240>
+  onset Pos
+  {
+    if ( value < 12 )
+      value = 12;
+    if ( value > Bounds.h - 12 )
+      value = Bounds.h - 12;
+
+    // The value doesn't change - nothing to do.
+    if ( pure Pos == value )
+      return;
+
+    // Remember the property's new value.
+    pure Pos = value;
+
+    InvalidateViewState();
+
+  }
+}
+
+$rect <740,90,940,130>
+$output false
+resource Resources::Bitmap NarrowFrame
+{
+  attr bitmapfile FileName = .\Res\3r3.png;
+  attr bitmapformat Format = Alpha8;
+  attr framesize FrameSize;
+  attr framedelay FrameDelay;
+  attr bitmapdithering Dithering = Auto;
+  attr bitmapmode Mode = Default;
+}
