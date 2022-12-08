@@ -19,7 +19,7 @@ class Application : Core::Root
   {
   }
 
-  $rect <500,0,700,40>
+  $rect <500,0,680,40>
   inherited property Bounds = <0,0,480,272>;
 
   // This is a filled rectangle view.
@@ -31,43 +31,94 @@ class Application : Core::Root
   }
 
   $rect <20,20,160,60>
-  object Application::ToggleButton ToggleButton0
+  object Application::BlinkingBar BlinkingBar
   {
-    preset Bounds = <24,12,155,59>;
-    preset State = ^Application::Device.LED0;
-    preset Label = "LED0";
+    preset Bounds = <90,0,151,236>;
+    preset Outlet = ^Application::Device.LED0;
   }
 
   $rect <20,20,160,60>
-  object Application::ToggleButton ToggleButton1
+  object Application::BlinkingBar BlinkingBar1
   {
-    preset Bounds = <24,61,155,107>;
-    preset State = ^Application::Device.LED1;
-    preset Label = "LED1";
+    preset Bounds = <169,0,230,236>;
+    preset Outlet = ^Application::Device.LED1;
   }
 
   $rect <20,20,160,60>
-  object Application::ToggleButton ToggleButton2
+  object Application::BlinkingBar BlinkingBar2
   {
-    preset Bounds = <24,111,155,157>;
-    preset State = ^Application::Device.LED2;
-    preset Label = "LED2";
+    preset Bounds = <248,0,308,236>;
+    preset Outlet = ^Application::Device.LED2;
   }
 
   $rect <20,20,160,60>
-  object Application::ToggleButton ToggleButton3
+  object Application::BlinkingBar BlinkingBar3
   {
-    preset Bounds = <24,161,155,207>;
-    preset State = ^Application::Device.LED3;
-    preset Label = "LED3";
+    preset Bounds = <327,0,388,236>;
+    preset Outlet = ^Application::Device.LED3;
   }
 
   $rect <20,20,160,60>
-  object Application::ToggleButton ToggleButton4
+  object Application::BlinkingBar BlinkingBar4
   {
-    preset Bounds = <24,211,155,258>;
-    preset State = ^Application::Device.LED4;
-    preset Label = "LED4";
+    preset Bounds = <407,0,468,236>;
+    preset Outlet = ^Application::Device.LED4;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text
+  {
+    preset Bounds = <0,2,81,26>;
+    preset String = "Max";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text1
+  {
+    preset Bounds = <4,192,85,216>;
+    preset String = "Min";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text2
+  {
+    preset Bounds = <80,247,161,271>;
+    preset String = "LED0";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text3
+  {
+    preset Bounds = <159,247,240,271>;
+    preset String = "LED1";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text4
+  {
+    preset Bounds = <238,247,319,271>;
+    preset String = "LED2";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text5
+  {
+    preset Bounds = <317,248,398,272>;
+    preset String = "LED3";
+    preset Font = Application::Font;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text6
+  {
+    preset Bounds = <397,248,478,272>;
+    preset String = "LED4";
+    preset Font = Application::Font;
   }
 }
 
@@ -77,7 +128,7 @@ $output false
 resource Resources::Font Font
 {
   attr fontname FontName = Roboto Black;
-  attr fontheight Height = 48;
+  attr fontheight Height = 24;
   attr fontquality Quality = High;
   attr fontranges Ranges = 0x20-0xFF;
   attr fontaspectratio AspectRatio = 1.0;
@@ -389,6 +440,8 @@ class BlinkingBar : Core::Group
     Touch.Point2 = point(bounds.x2 + 24, bounds.y1);
     Touch.Point3 = point(bounds.x2 + 24, bounds.y2);
     Touch.Point4 = point(bounds.x1 - 24, bounds.y2);
+
+    pure Pos = bounds.y2 - 3 - int32( Value * float( bounds.h - 6 ));
   }
 
   $rect <100,50,300,90>
@@ -410,7 +463,7 @@ class BlinkingBar : Core::Group
 
     var point SliderPos = Slider.Bounds.center;
     var point NewPos = point( SliderPos.x, Pos );
-    Slider.MoveView( NewPos - SliderPos, true );
+    Slider.MoveView( NewPos - SliderPos, false );
 
   }
 
@@ -482,9 +535,65 @@ class BlinkingBar : Core::Group
     // Remember the property's new value.
     pure Pos = value;
 
+    Value = float(Bounds.h - 12 - value) / float( Bounds.h - 24 );
     InvalidateViewState();
 
   }
+
+  $rect <300,0,500,40>
+  property float Value = 0.0;
+
+  $rect <300,40,500,80>
+  onset Value
+  {
+    if ( value < 0.0 )
+      value = 0.0;
+    if ( value > 1.0 )
+      value = 1.0;
+
+    // The value doesn't change - nothing to do.
+    if ( pure Value == value )
+      return;
+
+    // Remember the property's new value.
+    pure Value = value;
+
+    if ( Outlet != null )
+    {
+      if ( value == 0.0 )
+      {
+        BoolEffect.Enabled = false;
+        Outlet^ = false;
+      }
+      else
+      {
+        BoolEffect.InterCycleDelay = int32( 500.0 / math_pow( 10.0, value * 2.0 - 1.0 ));
+        BoolEffect.CycleDuration = BoolEffect.InterCycleDelay;
+        BoolEffect.Enabled = true;
+      }
+    }
+  }
+
+  $rect <500,0,700,40>
+  property ^bool Outlet;
+
+  $rect <500,40,700,80>
+  onset Outlet
+  {
+    // The value doesn't change - nothing to do.
+    if ( pure Outlet == value )
+      return;
+
+    // Remember the property's new value.
+    pure Outlet = value;
+
+    BoolEffect.Outlet = value;
+    BoolEffect.Enabled = value != null && Value != 0.0;
+
+  }
+
+  $rect <500,80,700,120>
+  object Effects::BoolEffect BoolEffect;
 }
 
 $rect <740,90,940,130>
