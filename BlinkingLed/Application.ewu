@@ -490,8 +490,8 @@ class BlinkingBar : Core::Group
     preset Bounds = <52,0,76,272>;
     preset ColorBL = #1E1EFFFF;
     preset ColorBR = #2C09FFFF;
-    preset ColorTR = #CD19FFFF;
-    preset ColorTL = #FF2121FF;
+    preset ColorTR = #FF2100FF;
+    preset ColorTL = #FF009BFF;
     preset Bitmap = Application::NarrowFrame;
   }
 
