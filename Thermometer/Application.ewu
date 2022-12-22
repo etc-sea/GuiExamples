@@ -1,0 +1,365 @@
+﻿$version 11.00
+
+$rect <20,220,220,260>
+inline Inline
+{
+  void DeviceDriver_StartCondition();
+  void DeviceDriver_StartReceive();
+  void DeviceDriver_CancelReceive();
+
+}
+
+// This is the root component of the entire GUI application.
+$rect <20,20,220,60>
+$output false
+class Application : Core::Root
+{
+  $rect <500,0,700,40>
+  inherited property Bounds = <0,0,480,272>;
+
+  // This is a filled rectangle view.
+  $rect <20,20,160,60>
+  object Views::Rectangle Background
+  {
+    preset Bounds = <0,0,480,272>;
+    preset Color = #33388DFF;
+  }
+
+  $rect <20,20,160,60>
+  object Application::Thermometer Thermometer
+  {
+    preset Bounds = <0,0,96,272>;
+    preset Outlet = ^Application::Device.Temperature;
+  }
+
+  $rect <500,100,700,140>
+  object Core::Timer Timer
+  {
+    preset OnTrigger = slotReadSensor;
+    preset Enabled = true;
+  }
+
+  $rect <500,140,700,180>
+  slot slotReadSensor
+  {
+    Application::Device.StartDHT11Reading();
+  }
+}
+
+// This is a font resource.
+$rect <230,20,430,60>
+$output false
+resource Resources::Font Font
+{
+  attr fontname FontName = Arial;
+  attr fontheight Height = 32;
+  attr fontquality Quality = High;
+  attr fontranges Ranges = 0x20-0xFF;
+  attr fontaspectratio AspectRatio = 1.0;
+  attr fontbold Bold = false;
+  attr fontitalic Italic = false;
+  attr fontkerning Kerning = true;
+  attr fontheightmode HeightMode = Compatible;
+  attr fontrowdistance RowDistance;
+}
+
+$rect <540,20,740,60>
+$output false
+class Thermometer : Core::Group
+{
+  $rect <310,0,490,40>
+  inherited onset Bounds
+  {
+    value.size = Application::Bitmap.FrameSize;
+
+    super(value);
+  }
+
+  $rect <110,0,310,40>
+  inherited property Bounds = <0,0,300,200>;
+
+  $rect <110,80,310,120>
+  inherited method UpdateLayout()
+  {
+    // Always invoke the inherited method.
+    super( aSize );
+
+
+  }
+
+  $rect <110,40,310,80>
+  inherited method UpdateViewState()
+  {
+    // Always invoke the inherited method.
+    super( aState );
+
+    var rect bounds = Bounds.orect;
+
+    bounds.y2 = 22 + ( 125 - Temperature ) * 184 / 180;
+    ImageEmpty.Bounds = bounds;
+
+    bounds.y1 = bounds.y2;
+    bounds.y2 = Bounds.h;
+    ImageFull.Bounds = bounds;
+  }
+
+  $rect <110,150,310,190>
+  property int32 Temperature = 25;
+
+  $rect <110,190,310,230>
+  onset Temperature
+  {
+    if ( value < -55 )
+      value = -55;
+    if ( value > 125 )
+      value = 125;
+
+    // display the blip even if the value not changed
+    postsignal BlipEffect.StartEffect;
+
+    // The value doesn't change - nothing to do.
+    if ( pure Temperature == value )
+      return;
+
+    // Remember the property's new value.
+    pure Temperature = value;
+    Text.String = string(value) + "°C";
+
+    InvalidateViewState();
+
+  }
+
+  $rect <20,20,160,60>
+  object Views::Image ImageEmpty
+  {
+    preset Bounds = <0,0,96,272>;
+    preset Alignment = Views::ImageAlignment[AlignHorzCenter, AlignVertTop];
+    preset Bitmap = Application::Bitmap;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Image ImageFull
+  {
+    preset Bounds = <0,0,96,272>;
+    preset Alignment = Views::ImageAlignment[AlignHorzCenter, AlignVertBottom];
+    preset FrameNumber = 1;
+    preset Bitmap = Application::Bitmap;
+  }
+
+  $rect <310,150,510,190>
+  property ^int32 Outlet;
+
+  $rect <310,190,510,230>
+  onset Outlet
+  {
+    // The value doesn't change - nothing to do.
+    if ( pure Outlet == value )
+      return;
+
+    if ( pure Outlet != null )
+      detachobserver onOutlet, pure Outlet;
+
+    // Remember the property's new value.
+    pure Outlet = value;
+
+    if ( value != null )
+    {
+      attachobserver onOutlet, value;
+      postsignal onOutlet;
+    }
+
+  }
+
+  $rect <510,150,710,190>
+  slot onOutlet
+  {
+    sender; /* the method is called from the sender object */
+
+    if ( Outlet != null )
+      Temperature = Outlet^;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Text Text
+  {
+    preset Bounds = <24,206,72,254>;
+    preset String = "25°C";
+    preset Font = Resources::FontSmall;
+  }
+
+  $rect <20,20,160,60>
+  object Views::Rectangle Blip
+  {
+    preset Bounds = <78,256,80,258>;
+    preset Color = #00FF4EFF;
+    preset Visible = false;
+  }
+
+  $rect <110,240,310,280>
+  object Effects::BoolEffect BlipEffect
+  {
+    preset Value2 = false;
+    preset Value1 = true;
+    preset Outlet = ^Blip.Visible;
+    preset NoOfCycles = 1;
+    preset CycleDuration = 250;
+  }
+}
+
+$rect <740,20,940,60>
+$output false
+resource Resources::Bitmap Bitmap
+{
+  attr bitmapfile FileName = .\Res\thermo.png;
+  attr bitmapformat Format = Native;
+  attr framesize FrameSize = <96,272>;
+  attr framedelay FrameDelay;
+  attr bitmapdithering Dithering = Auto;
+  attr bitmapmode Mode = Default;
+}
+
+$rect <20,180,220,220>
+$output false
+class DeviceClass : Templates::DeviceClass
+{
+  $rect <250,90,450,130>
+  property int32 Temperature;
+
+  $rect <650,90,850,130>
+  onget Temperature
+  {
+    // Per default return the value stored already in the property.
+    return pure Temperature;
+
+
+  }
+
+  $rect <450,90,650,130>
+  onset Temperature
+  {
+    // do not allow setting temperature from GUI
+    value;
+
+  }
+
+  // This method is intended to be called by the device to notify the GUI application \
+  // about an alternation of its setting or state value.
+  $rect <50,90,250,130>
+  $output true
+  method void UpdateDHT11State( arg int32 aTemperature, arg int32 aHumidity, arg bool aCrcOk )
+  {
+    if ( aCrcOk )
+    {
+      // Only if the reported value does differ from the one stored currently in the property.
+      if ( aTemperature != pure Temperature )
+      {
+        // Remember the new value in the internal memory of the property.
+        pure Temperature = aTemperature;
+
+        // Notify all associated property observers.
+        notifyobservers ^Temperature;
+      }
+
+      if ( aHumidity != pure Humidity )
+      {
+        // Remember the new value in the internal memory of the property.
+        pure Humidity = aHumidity;
+
+        // Notify all associated property observers.
+        notifyobservers ^Humidity;
+      }
+    }
+    TimeoutTimer.Enabled = false;
+  }
+
+  // Start taking a temperature read. This will initiate a 18ms start condition on \
+  // the Data line, after which it will receive the data bits from the sensor. At \
+  // the end of the reading cycle the Temperature property will be updated and all \
+  // the observers attached to it will be notified. If the operation times out, no \
+  // update and no notification will be issued.
+  $rect <50,50,250,90>
+  method void StartDHT11Reading()
+  {
+    $if !$prototyper
+      native
+      {
+        DeviceDriver_StartCondition();
+      }
+    $endif
+
+    StartTimer.Enabled = true;
+
+  }
+
+  $rect <250,50,450,90>
+  object Core::Timer StartTimer
+  {
+    preset OnTrigger = onStart;
+    preset Period = 0;
+    preset Begin = 20;
+  }
+
+  $rect <650,50,850,90>
+  object Core::Timer TimeoutTimer
+  {
+    preset OnTrigger = onTimeout;
+    preset Period = 0;
+    preset Begin = 30;
+  }
+
+  $rect <450,50,650,90>
+  slot onStart
+  {
+    $if ! $prototyper
+      native
+      {
+        DeviceDriver_StartReceive();
+      }
+    $endif
+
+    TimeoutTimer.Enabled = true;
+
+
+  }
+
+  $rect <850,50,1050,90>
+  slot onTimeout
+  {
+    $if !$prototyper
+      native
+      {
+        DeviceDriver_CancelReceive();
+      }
+    $endif
+
+  }
+
+  // DHT11 sensor operation
+  note group Note
+  {
+    attr Bounds = <40,10,1060,180>;
+  }
+
+  $rect <250,130,450,170>
+  property int32 Humidity;
+
+  $rect <650,130,850,170>
+  onget Humidity
+  {
+    // Per default return the value stored already in the property.
+    return pure Humidity;
+
+
+  }
+
+  $rect <450,130,650,170>
+  onset Humidity
+  {
+    // do not allow setting temperature from GUI
+    value;
+
+  }
+}
+
+$rect <220,180,420,220>
+autoobject Application::DeviceClass Device;
